@@ -1,6 +1,12 @@
+# Functions for ns-3 trace analysis.
+# (c) 2014-2015 Dmitry Ju. Chalyy
+#
 # The function calculates the network load which is made by certain endpoints. 
 # If endpoint emits the packet the network load increases by the byte length of the packet.
 # If endpoint reads the packet from network the network load decreases.
+# Parameters: 
+# * networktrace - a data frame which is formed by trace-reader.R function
+# * endpoints - a list of endpoints which are taken into account
 simpleNetworkLoad <- function(networktrace, endpoints=c()) {
   timevector <- c()
   loadvector <- c()
