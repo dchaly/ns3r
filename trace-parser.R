@@ -107,7 +107,7 @@ tcpParser <- function() {
   }
   tcpParseHeader <- function(headers) {
     if (tcpExists(headers)) {
-      t <- unlist(strsplit(sub("TcpHeader.*\\(([0-9]+) > ([0-9]+) Seq=([0-9]+) Ack=([0-9]+) Win=([0-9]+).*", "\\1 \\2 \\3 \\4 \\5", headers[grep("^TcpHeader", headers)]), " ", fixed=TRUE))
+      t <- unlist(strsplit(sub("TcpHeader.*\\(([0-9]+) > ([0-9]+) (\\[[A-Z ]*\\])* Seq=([0-9]+) Ack=([0-9]+) Win=([0-9]+).*", "\\1 \\2 \\4 \\5 \\6", headers[grep("^TcpHeader", headers)]), " ", fixed=TRUE))
       tcpsrc <<- c(tcpsrc, as.numeric(t[1]))
       tcpdst <<- c(tcpdst, as.numeric(t[2]))
       tcpseq <<- c(tcpseq, as.numeric(t[3]))
@@ -241,6 +241,11 @@ payloadParser <- function() {
     if (!identical(grep("^[0-9]+$", tmp), integer(0))) {
       return(as.numeric(tmp))
     } else {
+      tmp <- sub("Fragment \\[([0-9]+):([0-9]+)\\]", "\\1 \\2", x)
+      if (!identical(grep("^[0-9]+ [0-9]+$", tmp), integer(0))) {
+        tmpl <-unlist(strsplit(tmp, " "))
+        return(as.numeric(tmpl[2])-as.numeric(tmpl[1]))
+      }
       return(0)
     }
   }
