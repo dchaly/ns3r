@@ -106,7 +106,7 @@ std::clog << "\n";
     }
     
     void TricklesShieh::NewRequest() {
-        NS_LOG_FUNCTION (this);
+        //NS_LOG_FUNCTION (this);
         m_retries = 0;
         if (m_RcvdRequests.numBlocks()==0) {
             m_tcpBase = SequenceNumber32(0);
@@ -144,12 +144,18 @@ std::clog << "\n";
         ResetMultiplier();
 
         if (packet->RemoveHeader(tsh)) {
+            std::clog << "\nIncoming: ";
+            LOG_TRICKLES_HEADER(th);
+            LOG_TRICKLES_SHIEH_HEADER(tsh);
+            std::clog << "\n";
             if (tsh.GetTcpBase()<= th.GetTrickleNumber()) {
+                PrintState();
                 TricklesSocketBase::ProcessTricklesPacket(packet, th);
                 //std::clog << "Shieh processing: "; LOG_TRICKLES_HEADER(th); std::clog << "\n";
                 
                 if (th.GetPacketType()==CONTINUATION) ProcessShiehRequest(packet, th, tsh);
                 else ProcessShiehContinuation(packet, th, tsh);
+                PrintState();
             } else {
                 //std::clog << "Previous epoch packet";
             }
@@ -163,11 +169,11 @@ std::clog << "\n";
         NS_LOG_FUNCTION (this);
         
         // Нормальная отправка пакета
-        if (th.IsRecovery() == NO_RECOVERY) {
-            m_tcpBase = trh.GetTcpBase();
-            m_cwnd = trh.GetStartCwnd();
-            m_ssthresh = trh.GetSsthresh();
-        }
+//        if (th.IsRecovery() == NO_RECOVERY) {
+//            m_tcpBase = trh.GetTcpBase();
+//            m_cwnd = trh.GetStartCwnd();
+//            m_ssthresh = trh.GetSsthresh();
+//        }
         th.SetRequestSize(m_segSize);
         if (m_RcvdRequests.numBlocks()>1) {
             // Срабатывание повторной передачи
@@ -187,6 +193,16 @@ std::clog << "\n";
                 TrySendDelayed(true);
             }
         } else {
+            if ((th.IsRecovery() != NO_RECOVERY) && (m_RcvdRequests.numBlocks<2)) {
+                m_tcpBase = th.GetTrickleNumber();
+                m_cwnd = trh.GetStartCwnd();
+                m_ssthresh = trh.GetSsthresh();
+            }
+            if (th.GetTcpBase() < m_tcpBase) {
+                trh.SetTcpBase(m_tcpBase);
+                trh.SetStartCwnd(m_cwnd);
+                trh.SetSsthresh(m_ssthresh);
+            }
             ResetMultiplier();
             packet->AddHeader(trh);
             packet->AddHeader(th);
@@ -419,6 +435,12 @@ std::clog << "\n";
             m_retxEvent = Simulator::Schedule(GetRto(), &TricklesShieh::ReTxTimeout, this);
             TricklesSocketBase::Send(p, 0);
         }
+    }
+    
+    void TricklesShieh::PrintState() {
+        TricklesSocketBase::PrintState();
+        std::clog << "TCPBase: " << m_tcpBase << "; StartCwnd: " << m_cwnd << "; StartSSthresh: " << m_ssthresh << "; Delayed size: " << m_delayed.size();
+        std::clog << "\n";
     }
 
 } // namespace ns3
